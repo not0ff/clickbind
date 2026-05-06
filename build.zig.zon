@@ -1,0 +1,17 @@
+.{
+    .name = .clickbind,
+    .version = "0.0.1",
+    .dependencies = .{
+        .zaudio = .{
+            .url = "git+https://github.com/fourlexboehm/zaudio.git#557f8fcdf0c26e86a57f83e2a67affd09aa6498b",
+            .hash = "zaudio-0.11.0-dev-_M-91qoyQQDfje5uM1OSx8a67bMWZMza4gWUhbqKJCV2",
+        },
+        .toml = .{
+            .url = "git+https://github.com/sam701/zig-toml#a73c9423d88ed413204b39638fab7e9bccdb83fd",
+            .hash = "toml-0.3.0-bV14Be6EAQDr0fkyURz4jYFyTAMPcwlNN0FEPVjDnXTR",
+        },
+    },
+    .minimum_zig_version = "0.16.0",
+    .paths = .{""},
+    .fingerprint = 0x1d8702ea146fec54,
+}
