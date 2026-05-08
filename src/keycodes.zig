@@ -1,5 +1,9 @@
 const std = @import("std");
 
+pub const VAL_KEY_UP: u32 = 0x0;
+pub const VAL_KEY_DOWN: u32 = 0x1;
+pub const VAL_KEY_HOLD: u32 = 0x2;
+
 pub const INPUT_PROP_POINTER: u16 = 0x00;
 pub const INPUT_PROP_DIRECT: u16 = 0x01;
 pub const INPUT_PROP_BUTTONPAD: u16 = 0x02;
@@ -795,39 +799,138 @@ pub const SND_CNT: u16 = (SND_MAX + 1);
 pub const SND_PROFILE_SILENT: u16 = 0x00;
 pub const SND_PROFILE_VIBRATE: u16 = 0x01;
 pub const SND_PROFILE_RING: u16 = 0x02;
+pub const FF_STATUS_STOPPED: u16 = 0x00;
+pub const FF_STATUS_PLAYING: u16 = 0x01;
+pub const FF_STATUS_MAX: u16 = 0x01;
+pub const FF_HAPTIC: u16 = 0x4f;
+pub const FF_RUMBLE: u16 = 0x50;
+pub const FF_PERIODIC: u16 = 0x51;
+pub const FF_CONSTANT: u16 = 0x52;
+pub const FF_SPRING: u16 = 0x53;
+pub const FF_FRICTION: u16 = 0x54;
+pub const FF_DAMPER: u16 = 0x55;
+pub const FF_INERTIA: u16 = 0x56;
+pub const FF_RAMP: u16 = 0x57;
+pub const FF_EFFECT_MIN: u16 = FF_HAPTIC;
+pub const FF_EFFECT_MAX: u16 = FF_RAMP;
+pub const FF_SQUARE: u16 = 0x58;
+pub const FF_TRIANGLE: u16 = 0x59;
+pub const FF_SINE: u16 = 0x5a;
+pub const FF_SAW_UP: u16 = 0x5b;
+pub const FF_SAW_DOWN: u16 = 0x5c;
+pub const FF_CUSTOM: u16 = 0x5d;
+pub const FF_WAVEFORM_MIN: u16 = FF_SQUARE;
+pub const FF_WAVEFORM_MAX: u16 = FF_CUSTOM;
+pub const FF_GAIN: u16 = 0x60;
+pub const FF_AUTOCENTER: u16 = 0x61;
+pub const FF_MAX_EFFECTS: u16 = FF_GAIN;
+pub const FF_MAX: u16 = 0x7f;
+pub const FF_CNT: u16 = (FF_MAX + 1);
 
-const KeycodeMap: std.static_string_map.StaticStringMap(u16) = .initComptime(.{
-    .{ "INPUT_PROP_POINTER", INPUT_PROP_POINTER },
-    .{ "INPUT_PROP_DIRECT", INPUT_PROP_DIRECT },
-    .{ "INPUT_PROP_BUTTONPAD", INPUT_PROP_BUTTONPAD },
-    .{ "INPUT_PROP_SEMI_MT", INPUT_PROP_SEMI_MT },
-    .{ "INPUT_PROP_TOPBUTTONPAD", INPUT_PROP_TOPBUTTONPAD },
-    .{ "INPUT_PROP_POINTING_STICK", INPUT_PROP_POINTING_STICK },
-    .{ "INPUT_PROP_ACCELEROMETER", INPUT_PROP_ACCELEROMETER },
-    .{ "INPUT_PROP_PRESSUREPAD", INPUT_PROP_PRESSUREPAD },
-    .{ "INPUT_PROP_MAX", INPUT_PROP_MAX },
-    .{ "INPUT_PROP_CNT", INPUT_PROP_CNT },
-    .{ "EV_SYN", EV_SYN },
-    .{ "EV_KEY", EV_KEY },
-    .{ "EV_REL", EV_REL },
-    .{ "EV_ABS", EV_ABS },
-    .{ "EV_MSC", EV_MSC },
-    .{ "EV_SW", EV_SW },
-    .{ "EV_LED", EV_LED },
-    .{ "EV_SND", EV_SND },
-    .{ "EV_REP", EV_REP },
-    .{ "EV_FF", EV_FF },
-    .{ "EV_PWR", EV_PWR },
-    .{ "EV_FF_STATUS", EV_FF_STATUS },
-    .{ "EV_MAX", EV_MAX },
-    .{ "EV_CNT", EV_CNT },
-    .{ "SYN_REPORT", SYN_REPORT },
-    .{ "SYN_CONFIG", SYN_CONFIG },
-    .{ "SYN_MT_REPORT", SYN_MT_REPORT },
-    .{ "SYN_DROPPED", SYN_DROPPED },
-    .{ "SYN_MAX", SYN_MAX },
-    .{ "SYN_CNT", SYN_CNT },
-    .{ "KEY_RESERVED", KEY_RESERVED },
+pub const keycode_letters = [_]u16{
+    KEY_Q,
+    KEY_W,
+    KEY_E,
+    KEY_R,
+    KEY_T,
+    KEY_Y,
+    KEY_U,
+    KEY_I,
+    KEY_O,
+    KEY_P,
+    KEY_A,
+    KEY_S,
+    KEY_D,
+    KEY_F,
+    KEY_G,
+    KEY_H,
+    KEY_J,
+    KEY_K,
+    KEY_L,
+    KEY_Z,
+    KEY_X,
+    KEY_C,
+    KEY_V,
+    KEY_B,
+    KEY_N,
+    KEY_M,
+};
+
+pub const keycode_digits = [_]u16{
+    KEY_1,
+    KEY_2,
+    KEY_3,
+    KEY_4,
+    KEY_5,
+    KEY_6,
+    KEY_7,
+    KEY_8,
+    KEY_9,
+    KEY_0,
+    KEY_NUMERIC_0,
+    KEY_NUMERIC_1,
+    KEY_NUMERIC_2,
+    KEY_NUMERIC_3,
+    KEY_NUMERIC_4,
+    KEY_NUMERIC_5,
+    KEY_NUMERIC_6,
+    KEY_NUMERIC_7,
+    KEY_NUMERIC_8,
+    KEY_NUMERIC_9,
+    KEY_KP0,
+    KEY_KP1,
+    KEY_KP2,
+    KEY_KP3,
+    KEY_KP4,
+    KEY_KP5,
+    KEY_KP6,
+    KEY_KP7,
+    KEY_KP8,
+    KEY_KP9,
+};
+
+pub const keycode_special = [_]u16{
+    KEY_MINUS,
+    KEY_EQUAL,
+    KEY_LEFTBRACE,
+    KEY_RIGHTBRACE,
+    KEY_SEMICOLON,
+    KEY_APOSTROPHE,
+    KEY_GRAVE,
+    KEY_BACKSLASH,
+    KEY_COMMA,
+    KEY_DOT,
+    KEY_SLASH,
+    KEY_KPASTERISK,
+};
+
+pub const keycode_whitespace = [_]u16{
+    KEY_SPACE,
+    KEY_TAB,
+};
+
+pub const keycode_control = [_]u16{
+    KEY_LEFTCTRL,
+    KEY_RIGHTCTRL,
+    KEY_LEFTSHIFT,
+    KEY_RIGHTSHIFT,
+    KEY_LEFTALT,
+    KEY_RIGHTALT,
+};
+
+const keycode_ranges_map: std.static_string_map.StaticStringMap([]const u16) = .initComptime(.{
+    .{ "KEYS_LETTERS", &keycode_letters },
+    .{ "KEYS_DIGITS", &keycode_digits },
+    .{ "KEYS_SPECIAL", &keycode_special },
+    .{ "KEYS_WHITESPACE", &keycode_whitespace },
+    .{ "KEYS_CONTROL", &keycode_control },
+});
+
+pub fn keycodesRangeFromName(name: []const u8) ?[]const u16 {
+    return keycode_ranges_map.get(name);
+}
+
+const keycode_map: std.static_string_map.StaticStringMap(u16) = .initComptime(.{
     .{ "KEY_ESC", KEY_ESC },
     .{ "KEY_1", KEY_1 },
     .{ "KEY_2", KEY_2 },
@@ -1475,125 +1578,8 @@ const KeycodeMap: std.static_string_map.StaticStringMap(u16) = .initComptime(.{
     .{ "BTN_TRIGGER_HAPPY39", BTN_TRIGGER_HAPPY39 },
     .{ "BTN_TRIGGER_HAPPY40", BTN_TRIGGER_HAPPY40 },
     .{ "KEY_MIN_INTERESTING", KEY_MIN_INTERESTING },
-    .{ "KEY_MAX", KEY_MAX },
-    .{ "KEY_CNT", KEY_CNT },
-    .{ "REL_X", REL_X },
-    .{ "REL_Y", REL_Y },
-    .{ "REL_Z", REL_Z },
-    .{ "REL_RX", REL_RX },
-    .{ "REL_RY", REL_RY },
-    .{ "REL_RZ", REL_RZ },
-    .{ "REL_HWHEEL", REL_HWHEEL },
-    .{ "REL_DIAL", REL_DIAL },
-    .{ "REL_WHEEL", REL_WHEEL },
-    .{ "REL_MISC", REL_MISC },
-    .{ "REL_RESERVED", REL_RESERVED },
-    .{ "REL_WHEEL_HI_RES", REL_WHEEL_HI_RES },
-    .{ "REL_HWHEEL_HI_RES", REL_HWHEEL_HI_RES },
-    .{ "REL_MAX", REL_MAX },
-    .{ "REL_CNT", REL_CNT },
-    .{ "ABS_X", ABS_X },
-    .{ "ABS_Y", ABS_Y },
-    .{ "ABS_Z", ABS_Z },
-    .{ "ABS_RX", ABS_RX },
-    .{ "ABS_RY", ABS_RY },
-    .{ "ABS_RZ", ABS_RZ },
-    .{ "ABS_THROTTLE", ABS_THROTTLE },
-    .{ "ABS_RUDDER", ABS_RUDDER },
-    .{ "ABS_WHEEL", ABS_WHEEL },
-    .{ "ABS_GAS", ABS_GAS },
-    .{ "ABS_BRAKE", ABS_BRAKE },
-    .{ "ABS_HAT0X", ABS_HAT0X },
-    .{ "ABS_HAT0Y", ABS_HAT0Y },
-    .{ "ABS_HAT1X", ABS_HAT1X },
-    .{ "ABS_HAT1Y", ABS_HAT1Y },
-    .{ "ABS_HAT2X", ABS_HAT2X },
-    .{ "ABS_HAT2Y", ABS_HAT2Y },
-    .{ "ABS_HAT3X", ABS_HAT3X },
-    .{ "ABS_HAT3Y", ABS_HAT3Y },
-    .{ "ABS_PRESSURE", ABS_PRESSURE },
-    .{ "ABS_DISTANCE", ABS_DISTANCE },
-    .{ "ABS_TILT_X", ABS_TILT_X },
-    .{ "ABS_TILT_Y", ABS_TILT_Y },
-    .{ "ABS_TOOL_WIDTH", ABS_TOOL_WIDTH },
-    .{ "ABS_VOLUME", ABS_VOLUME },
-    .{ "ABS_PROFILE", ABS_PROFILE },
-    .{ "ABS_SND_PROFILE", ABS_SND_PROFILE },
-    .{ "ABS_MISC", ABS_MISC },
-    .{ "ABS_RESERVED", ABS_RESERVED },
-    .{ "ABS_MT_SLOT", ABS_MT_SLOT },
-    .{ "ABS_MT_TOUCH_MAJOR", ABS_MT_TOUCH_MAJOR },
-    .{ "ABS_MT_TOUCH_MINOR", ABS_MT_TOUCH_MINOR },
-    .{ "ABS_MT_WIDTH_MAJOR", ABS_MT_WIDTH_MAJOR },
-    .{ "ABS_MT_WIDTH_MINOR", ABS_MT_WIDTH_MINOR },
-    .{ "ABS_MT_ORIENTATION", ABS_MT_ORIENTATION },
-    .{ "ABS_MT_POSITION_X", ABS_MT_POSITION_X },
-    .{ "ABS_MT_POSITION_Y", ABS_MT_POSITION_Y },
-    .{ "ABS_MT_TOOL_TYPE", ABS_MT_TOOL_TYPE },
-    .{ "ABS_MT_BLOB_ID", ABS_MT_BLOB_ID },
-    .{ "ABS_MT_TRACKING_ID", ABS_MT_TRACKING_ID },
-    .{ "ABS_MT_PRESSURE", ABS_MT_PRESSURE },
-    .{ "ABS_MT_DISTANCE", ABS_MT_DISTANCE },
-    .{ "ABS_MT_TOOL_X", ABS_MT_TOOL_X },
-    .{ "ABS_MT_TOOL_Y", ABS_MT_TOOL_Y },
-    .{ "ABS_MAX", ABS_MAX },
-    .{ "ABS_CNT", ABS_CNT },
-    .{ "SW_LID", SW_LID },
-    .{ "SW_TABLET_MODE", SW_TABLET_MODE },
-    .{ "SW_HEADPHONE_INSERT", SW_HEADPHONE_INSERT },
-    .{ "SW_RFKILL_ALL", SW_RFKILL_ALL },
-    .{ "SW_RADIO", SW_RADIO },
-    .{ "SW_MICROPHONE_INSERT", SW_MICROPHONE_INSERT },
-    .{ "SW_DOCK", SW_DOCK },
-    .{ "SW_LINEOUT_INSERT", SW_LINEOUT_INSERT },
-    .{ "SW_JACK_PHYSICAL_INSERT", SW_JACK_PHYSICAL_INSERT },
-    .{ "SW_VIDEOOUT_INSERT", SW_VIDEOOUT_INSERT },
-    .{ "SW_CAMERA_LENS_COVER", SW_CAMERA_LENS_COVER },
-    .{ "SW_KEYPAD_SLIDE", SW_KEYPAD_SLIDE },
-    .{ "SW_FRONT_PROXIMITY", SW_FRONT_PROXIMITY },
-    .{ "SW_ROTATE_LOCK", SW_ROTATE_LOCK },
-    .{ "SW_LINEIN_INSERT", SW_LINEIN_INSERT },
-    .{ "SW_MUTE_DEVICE", SW_MUTE_DEVICE },
-    .{ "SW_PEN_INSERTED", SW_PEN_INSERTED },
-    .{ "SW_MACHINE_COVER", SW_MACHINE_COVER },
-    .{ "SW_USB_INSERT", SW_USB_INSERT },
-    .{ "SW_MAX", SW_MAX },
-    .{ "SW_CNT", SW_CNT },
-    .{ "MSC_SERIAL", MSC_SERIAL },
-    .{ "MSC_PULSELED", MSC_PULSELED },
-    .{ "MSC_GESTURE", MSC_GESTURE },
-    .{ "MSC_RAW", MSC_RAW },
-    .{ "MSC_SCAN", MSC_SCAN },
-    .{ "MSC_TIMESTAMP", MSC_TIMESTAMP },
-    .{ "MSC_MAX", MSC_MAX },
-    .{ "MSC_CNT", MSC_CNT },
-    .{ "LED_NUML", LED_NUML },
-    .{ "LED_CAPSL", LED_CAPSL },
-    .{ "LED_SCROLLL", LED_SCROLLL },
-    .{ "LED_COMPOSE", LED_COMPOSE },
-    .{ "LED_KANA", LED_KANA },
-    .{ "LED_SLEEP", LED_SLEEP },
-    .{ "LED_SUSPEND", LED_SUSPEND },
-    .{ "LED_MUTE", LED_MUTE },
-    .{ "LED_MISC", LED_MISC },
-    .{ "LED_MAIL", LED_MAIL },
-    .{ "LED_CHARGING", LED_CHARGING },
-    .{ "LED_MAX", LED_MAX },
-    .{ "LED_CNT", LED_CNT },
-    .{ "REP_DELAY", REP_DELAY },
-    .{ "REP_PERIOD", REP_PERIOD },
-    .{ "REP_MAX", REP_MAX },
-    .{ "REP_CNT", REP_CNT },
-    .{ "SND_CLICK", SND_CLICK },
-    .{ "SND_BELL", SND_BELL },
-    .{ "SND_TONE", SND_TONE },
-    .{ "SND_MAX", SND_MAX },
-    .{ "SND_CNT", SND_CNT },
-    .{ "SND_PROFILE_SILENT", SND_PROFILE_SILENT },
-    .{ "SND_PROFILE_VIBRATE", SND_PROFILE_VIBRATE },
-    .{ "SND_PROFILE_RING", SND_PROFILE_RING },
 });
 
-pub fn codeFromName(name: []const u8) ?u16 {
-    return KeycodeMap.get(name);
+pub fn keycodeFromName(name: []const u8) ?u16 {
+    return keycode_map.get(name);
 }
