@@ -25,7 +25,6 @@ const toml = @import("toml");
 
 const kc = @import("keycodes.zig");
 
-const Bindmap = std.AutoHashMap(u16, [:0]const u8);
 const SoundQueue = std.PriorityQueue(*zaudio.Sound, void, comparePlaybacks);
 
 const Keybind = struct {
@@ -51,22 +50,78 @@ const HandlerCtx = struct {
     playbacks: *SoundQueue,
 };
 
+const Bindmap = struct {
+    map: std.AutoHashMap(u16, *[:0]const u8),
+    keycodes: []const u16,
+    sounds: [][:0]const u8,
+
+    fn init(keybinds: []const Keybind, alloc: Allocator) !Bindmap {
+        var map: std.AutoHashMap(u16, *[:0]const u8) = .init(alloc);
+        errdefer map.deinit();
+
+        var keycodes: std.ArrayList(u16) = try .initCapacity(alloc, keybinds.len);
+        errdefer keycodes.deinit(alloc);
+        var sounds = try alloc.alloc([:0]const u8, keybinds.len);
+        errdefer alloc.free(sounds);
+
+        for (keybinds, 0..) |kb, i| {
+            const sound: [:0]const u8 = try alloc.dupeSentinel(u8, kb.sound, 0x0);
+            errdefer alloc.free(sound);
+            sounds[i] = sound;
+
+            for (kb.keys) |keyname| {
+                const codes: []const u16 = blk: {
+                    if (kc.keycodeFromName(keyname)) |code| break :blk &[_]u16{code};
+                    break :blk kc.keycodesRangeFromName(keyname) orelse {
+                        std.log.err("unknown key specified in keybind: {s}", .{keyname});
+                        return error.UnknownKeyname;
+                    };
+                };
+                try keycodes.appendSlice(alloc, codes);
+                for (codes) |code| {
+                    const res = try map.getOrPut(code);
+                    if (res.found_existing) std.log.warn("keybind for {s} is already set. overwritting sound to {s}", .{ keyname, sound });
+                    res.value_ptr.* = &sounds[i];
+                }
+            }
+        }
+        return .{
+            .map = map,
+            .keycodes = try keycodes.toOwnedSlice(alloc),
+            .sounds = sounds,
+        };
+    }
+
+    fn deinit(self: *Bindmap, alloc: Allocator) void {
+        for (self.sounds) |s| alloc.free(s);
+        alloc.free(self.sounds);
+        alloc.free(self.keycodes);
+        self.map.deinit();
+    }
+
+    fn getSoundForKeycode(self: Bindmap, code: u16) ?*[:0]const u8 {
+        return self.map.get(code);
+    }
+};
+
 inline fn EVIOCGBIT(ev: u8, comptime len: usize) u32 {
     return linux.IOCTL.IOR('E', 0x20 + ev, [len]u8);
 }
 
-inline fn bitsToUSize(x: u16) usize {
-    return x + 8 * (@sizeOf(usize) - 1) / (8 * @sizeOf(usize));
+inline fn bitsToLongs(x: comptime_int) comptime_int {
+    return x + 8 * @sizeOf(usize) - 1 / (8 * @sizeOf(usize));
 }
 
-fn deviceHasAnyKeycode(handle: Io.File.Handle, codes: []u16) !bool {
-    var evbits: [bitsToUSize(kc.KEY_CNT)]u8 = undefined;
-    const ret = linux.ioctl(handle, EVIOCGBIT(kc.EV_KEY, evbits.len), @intFromPtr(&evbits));
-    if (ret < 0) return error.IoctlFailedCall;
+inline fn testBit(bits: []usize, bit: usize) bool {
+    return (bits[bit / (8 * @sizeOf(usize))] >> @as(u6, @intCast(bit % (8 * @sizeOf(usize))))) & 1 == 1;
+}
 
+fn deviceHasAnyKeycode(handle: Io.File.Handle, codes: []const u16) !bool {
+    var evbits: [bitsToLongs(kc.KEY_CNT)]usize = undefined;
+    const ret = linux.ioctl(handle, EVIOCGBIT(kc.EV_KEY, evbits.len * @sizeOf(usize)), @intFromPtr(&evbits));
+    if (ret < 0) return error.IoctlFailedCall;
     for (codes) |code| {
-        const mask = @as(u8, 1) << @as(u3, @intCast(code & 0x7));
-        if ((evbits[code / 8] & mask) != 0) return true;
+        if (testBit(&evbits, @intCast(code))) return true;
     }
     return false;
 }
@@ -83,37 +138,6 @@ fn listenOnDevice(dev: Io.File, queue: *Io.Queue(Event), io: Io) error{Canceled}
         if (event.type == kc.EV_KEY and event.value == kc.VAL_KEY_DOWN)
             queue.putOne(io, event) catch return error.Canceled;
     }
-}
-
-// Returned values need to be deinited and freed. Map values are heap allocated
-fn createKeyMappings(keybinds: []const Keybind, alloc: Allocator) !struct { Bindmap, []u16 } {
-    var bindmap: std.AutoHashMap(u16, [:0]const u8) = .init(alloc);
-    errdefer bindmap.deinit();
-
-    var keycodes: std.ArrayList(u16) = .empty;
-    errdefer keycodes.deinit(alloc);
-
-    for (keybinds) |kb| {
-        for (kb.keys) |keyname| {
-            var codes: []const u16 = undefined;
-            if (kc.keycodeFromName(keyname)) |code| {
-                codes = &[_]u16{code};
-            } else {
-                codes = kc.keycodesRangeFromName(keyname) orelse {
-                    std.log.warn("unknown key specified in keybind: {s}", .{keyname});
-                    continue;
-                };
-            }
-            try keycodes.appendSlice(alloc, codes);
-            const sound = try alloc.dupeSentinel(u8, kb.sound, 0x0);
-            for (codes) |code| {
-                const res = try bindmap.getOrPut(code);
-                if (res.found_existing) std.log.warn("keybind for {s} is already set. overwritting sound to {s}", .{ keyname, sound });
-                res.value_ptr.* = sound;
-            }
-        }
-    }
-    return .{ bindmap, try keycodes.toOwnedSlice(alloc) };
 }
 
 fn startPlayback(engine: *zaudio.Engine, path: [:0]const u8) !*zaudio.Sound {
@@ -151,9 +175,9 @@ fn handleEvents(ctx: HandlerCtx, io: Io, alloc: Allocator) error{Canceled}!void 
     var i: usize = 0;
     while (true) : (i += 1) {
         const event = ctx.queue.getOne(io) catch return error.Canceled;
-        const sound = ctx.bindmap.get(event.code) orelse continue;
+        const sound = ctx.bindmap.getSoundForKeycode(event.code) orelse continue;
 
-        const pb = startPlayback(ctx.engine, sound) catch |err| {
+        const pb = startPlayback(ctx.engine, sound.*) catch |err| {
             std.log.err("cannot start playback: {s}", .{@errorName(err)});
             continue;
         };
@@ -165,7 +189,6 @@ fn handleEvents(ctx: HandlerCtx, io: Io, alloc: Allocator) error{Canceled}!void 
             std.log.info("tidying playbacks..", .{});
             tidyPlaybacks(ctx.playbacks, alloc) catch |err| {
                 std.log.err("cannot tidy playback queue: {s}", .{@errorName(err)});
-                continue;
             };
         }
     }
@@ -195,11 +218,15 @@ pub fn main(init: std.process.Init) !void {
     errdefer group.cancel(thread_io);
 
     var parser: toml.Parser(Config) = .init(alloc);
-    const config = try parser.parseFile(io, "./config.toml");
-    const bindmap, const keycodes = try createKeyMappings(config.value.keybind, alloc);
+    defer parser.deinit();
+    var config = try parser.parseFile(io, "./config.toml");
+    defer config.deinit();
+    var bindmap: Bindmap = try .init(config.value.keybind, alloc);
+    defer bindmap.deinit(alloc);
 
     const devices = blk: {
         var devs: std.ArrayList(Io.File) = .empty;
+        errdefer devs.deinit(alloc);
         const dir = try Io.Dir.openDirAbsolute(io, "/dev/input/", .{ .iterate = true });
         defer dir.close(io);
         var it = dir.iterate();
@@ -207,7 +234,8 @@ pub fn main(init: std.process.Init) !void {
             if (entry.kind != .character_device) continue;
             var dev = try dir.openFile(io, entry.name, .{});
             errdefer dev.close(io);
-            if (try deviceHasAnyKeycode(dev.handle, keycodes)) {
+            if (try deviceHasAnyKeycode(dev.handle, bindmap.keycodes)) {
+                std.log.info("adding device {s}", .{entry.name});
                 try devs.append(alloc, dev);
                 continue;
             }
@@ -215,17 +243,19 @@ pub fn main(init: std.process.Init) !void {
         }
         break :blk try devs.toOwnedSlice(alloc);
     };
+    defer alloc.free(devices);
     defer for (devices) |dev| dev.close(io);
 
     var buf: [32]Event = undefined;
     var queue: Io.Queue(Event) = .init(&buf);
     defer queue.close(io);
-    for (devices) |dev| {
+    for (devices) |dev|
         try group.concurrent(thread_io, listenOnDevice, .{ dev, &queue, thread_io });
-    }
+
     std.log.info("listening on {d} devices", .{devices.len});
 
     var playbacks: SoundQueue = .empty;
+    defer playbacks.deinit(alloc);
     defer for (playbacks.items) |pb| pb.destroy();
     const ctx: HandlerCtx = .{
         .bindmap = bindmap,
@@ -243,7 +273,7 @@ pub fn main(init: std.process.Init) !void {
     };
     posix.sigaction(posix.SIG.INT, &sigact, null);
 
-    while (!exit_sig.load(.acquire)) try io.checkCancel();
+    while (!exit_sig.load(.acquire)) try io.sleep(.fromMilliseconds(1), .awake);
     std.log.info("closing...", .{});
     group.cancel(thread_io);
     try group.await(thread_io);
